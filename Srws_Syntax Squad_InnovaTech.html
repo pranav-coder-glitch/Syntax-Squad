@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VisionSense Pro | Smart Disposal Guide</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap');
+
+        :root {
+            --yellow: #facc15;
+            --green: #4ade80;
+            --red: #f87171;
+            --blue: #60a5fa;
+            --orange: #fb923c;
+            --bg: #050505;
+            --card: #0f0f0f;
+            --border: #222;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Space Mono", monospace;
+            background: var(--bg);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container { width: 100%; max-width: 820px; gap: 14px; display: flex; flex-direction: column; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #222;
+            padding-bottom: 12px;
+        }
+
+        .title {
+            font-family: "Syne", sans-serif;
+            color: var(--yellow);
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle { font-size: 0.72rem; color: #555; letter-spacing: 0.1em; text-transform: uppercase; }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #222;
+            background: #000;
+            aspect-ratio: 16 / 9;
+        }
+
+        #webcam, #overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        #webcam { transform: scaleX(-1); }
+        #overlay { pointer-events: none; }
+
+        .status-bar {
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #0a0a0a;
+            font-size: 0.8rem;
+            text-align: center;
+            border: 1px solid #1a1a1a;
+            color: #555;
+            min-height: 44px;
+            display: grid;
+            place-items: center;
+            letter-spacing: 0.03em;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, var(--yellow) 0%, #eab308 100%);
+            padding: 18px 20px;
+            border-radius: 12px;
+            color: #000;
+        }
+
+        .result-label { font-size: 0.65rem; letter-spacing: 2px; opacity: 0.6; font-family: "Space Mono", monospace; }
+
+        #prediction {
+            font-family: "Syne", sans-serif;
+            font-size: clamp(1.6rem, 5vw, 2.2rem);
+            font-weight: 800;
+            text-transform: uppercase;
+            margin: 6px 0 10px;
+            line-height: 1.05;
+            overflow-wrap: anywhere;
+        }
+
+        .conf-bg { background: rgba(0,0,0,0.18); height: 6px; border-radius: 3px; overflow: hidden; }
+        #confFill { background: #000; height: 100%; width: 0%; transition: width 0.25s ease; }
+
+        /* ── DISPOSAL CARD ── */
+        #disposalCard {
+            display: none;
+            border-radius: 12px;
+            border: 1px solid #222;
+            overflow: hidden;
+            animation: slideIn 0.35s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .disposal-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px;
+            background: #111;
+            border-bottom: 1px solid #222;
+        }
+
+        .disposal-icon { font-size: 1.5rem; }
+
+        .disposal-title {
+            font-family: "Syne", sans-serif;
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .disposal-badge {
+            margin-left: auto;
+            font-size: 0.65rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .badge-recycle  { background: rgba(74,222,128,0.15); color: var(--green);  border: 1px solid rgba(74,222,128,0.3); }
+        .badge-trash    { background: rgba(248,113,113,0.15); color: var(--red);   border: 1px solid rgba(248,113,113,0.3); }
+        .badge-hazard   { background: rgba(251,146,60,0.15);  color: var(--orange);border: 1px solid rgba(251,146,60,0.3); }
+        .badge-compost  { background: rgba(96,165,250,0.15);  color: var(--blue);  border: 1px solid rgba(96,165,250,0.3); }
+        .badge-donate   { background: rgba(250,204,21,0.15);  color: var(--yellow);border: 1px solid rgba(250,204,21,0.3); }
+
+        .disposal-body { padding: 16px 18px; background: #0a0a0a; }
+
+        #disposalSteps {
+            font-size: 0.83rem;
+            line-height: 1.7;
+            color: #ccc;
+            white-space: pre-wrap;
+        }
+
+        #disposalSteps .step {
+            display: flex;
+            gap: 10px;
+            padding: 7px 0;
+            border-bottom: 1px solid #161616;
+        }
+
+        #disposalSteps .step:last-child { border-bottom: none; }
+
+        .step-num {
+            color: var(--yellow);
+            font-weight: 700;
+            min-width: 20px;
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+
+        .step-text { color: #bbb; font-size: 0.82rem; }
+
+        .disposal-footer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: #080808;
+            border-top: 1px solid #1a1a1a;
+            font-size: 0.72rem;
+            color: #444;
+        }
+
+        .disposal-footer span { color: #333; }
+
+        #disposalLoading {
+            display: none;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #555;
+            background: #0a0a0a;
+            letter-spacing: 0.05em;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px; height: 14px;
+            border: 2px solid #333;
+            border-top-color: var(--yellow);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── CONTROLS ── */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.95rem;
+            font-family: "Space Mono", monospace;
+            letter-spacing: 0.05em;
+        }
+
+        #startBtn { background: var(--yellow); color: #000; box-shadow: 0 4px 20px rgba(250,204,21,0.2); }
+        #startBtn:hover:not(:disabled) { filter: brightness(1.08); }
+        #startBtn:disabled { background: #1a1a1a; color: #444; cursor: wait; box-shadow: none; }
+
+        .error-msg {
+            background: #1a0505;
+            color: #fecaca;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+            font-size: 0.8rem;
+            border: 1px solid #3f0f0f;
+            line-height: 1.5;
+        }
+
+        .control-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+
+        .model-select, .label-input {
+            background: #0a0a0a;
+            border: 1px solid #222;
+            color: #fff;
+            padding: 11px 13px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            width: 100%;
+            font-family: "Space Mono", monospace;
+        }
+
+        .model-select option { background: #111; }
+        .label-input { min-height: 72px; resize: vertical; line-height: 1.4; }
+        .hint { color: #444; font-size: 0.72rem; line-height: 1.4; }
+
+        @media (max-width: 560px) {
+            body { padding: 12px; }
+            .result-card, .disposal-body { padding: 14px; }
+            .btn { padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <div class="title">VisionSense Pro</div>
+            <div class="subtitle">Smart Disposal Edition</div>
+        </div>
+    </div>
+
+    <div id="video-container">
+        <video id="webcam" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <div id="errorBox" class="error-msg"></div>
+    <div id="status" class="status-bar">Choose the detection engine, then initialize.</div>
+
+    <div class="control-grid">
+        <select id="modelSelect" class="model-select">
+            <option value="open-vocab">Open Vocabulary OWL-ViT — detects your custom labels</option>
+            <option value="fast-coco">Fast fallback DETR — 80 common COCO classes</option>
+        </select>
+        <textarea id="labelInput" class="label-input" spellcheck="false">person, face, hand, phone, laptop, keyboard, mouse, bottle, cup, book, pen, pencil, paper, notebook, bag, backpack, chair, table, door, window, watch, glasses, shoes, ball, toy, plant, flower, car, bicycle, dog, cat, bird, food, plate, spoon, fork, remote, charger, cable, headphones</textarea>
+        <div class="hint">Open Vocabulary searches for the comma-separated labels above. You can add any object beyond COCO without changing the code.</div>
+    </div>
+
+    <div class="result-card">
+        <div class="result-label">LIVE DETECTION</div>
+        <div id="prediction">System Idle</div>
+        <div class="conf-bg"><div id="confFill"></div></div>
+    </div>
+
+    <!-- DISPOSAL CARD -->
+    <div id="disposalCard">
+        <div class="disposal-header">
+            <div class="disposal-icon" id="disposalIcon">♻️</div>
+            <div class="disposal-title" id="disposalTitle">How to Dispose</div>
+            <div class="disposal-badge badge-recycle" id="disposalBadge">RECYCLE</div>
+        </div>
+        <div id="disposalLoading">
+            <span class="spinner"></span>ASKING AI FOR DISPOSAL GUIDE...
+        </div>
+        <div class="disposal-body" id="disposalBody">
+            <div id="disposalSteps"></div>
+        </div>
+        <div class="disposal-footer">
+            <span>♻</span> Built-in Disposal Database &nbsp;·&nbsp; Always verify with your local waste authority
+        </div>
+    </div>
+
+    <button id="startBtn" class="btn">INITIALIZE ENGINE</button>
+</div>
+
+<script type="module">
+import { pipeline, env, RawImage } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2";
+
+env.allowLocalModels = false;
+env.allowRemoteModels = true;
+env.backends.onnx.wasm.proxy = false;
+
+const MODEL_CONFIGS = {
+    "open-vocab": {
+        task: "zero-shot-object-detection",
+        id: "Xenova/owlvit-base-patch32",
+        label: "Open Vocabulary OWL-ViT",
+        threshold: 0.18,   // raised from 0.1 — cuts weak false positives
+        interval: 300,
+        usesCandidateLabels: true
+    },
+    "fast-coco": {
+        task: "object-detection",
+        id: "Xenova/detr-resnet-50",
+        label: "Fast DETR fallback",
+        threshold: 0.75,   // raised from 0.68 — more confident hits only
+        interval: 250,
+        usesCandidateLabels: false
+    }
+};
+
+const FAST_SCAN_MAX_LABELS = 24;
+
+let detector = null;
+let activeConfig = null;
+let candidateLabels = [];
+let isRunning = false;
+let isDetecting = false;
+let lastSpoken = "";
+let stableHits = 0;
+let lastSpeechAt = 0;
+let detectTimer = null;
+let skippedFrames = 0;
+
+// Disposal tracking
+let lastDisposalLabel = "";
+let disposalTimeout = null;
+
+// Label smoothing — only accept a label confirmed in 2 of last 3 frames
+const LABEL_HISTORY_SIZE = 3;
+let labelHistory = [];
+
+function getMostStableLabel(detections) {
+    if (!detections.length) { labelHistory = []; return null; }
+    const top = detections[0];
+    labelHistory.push(top.label);
+    if (labelHistory.length > LABEL_HISTORY_SIZE) labelHistory.shift();
+    // Count frequency
+    const freq = {};
+    for (const l of labelHistory) freq[l] = (freq[l] || 0) + 1;
+    const best = Object.entries(freq).sort((a,b) => b[1]-a[1])[0];
+    // Require label to appear in at least 2 of last 3 frames
+    return best[1] >= 2 ? best[0] : null;
+}
+
+const video       = document.getElementById("webcam");
+const canvas      = document.getElementById("overlay");
+const ctx         = canvas.getContext("2d");
+const frameCanvas = document.createElement("canvas");
+const frameCtx    = frameCanvas.getContext("2d", { willReadFrequently: true });
+const startBtn    = document.getElementById("startBtn");
+const statusEl    = document.getElementById("status");
+const errorBox    = document.getElementById("errorBox");
+const modelSelect = document.getElementById("modelSelect");
+const labelInput  = document.getElementById("labelInput");
+const predictionEl    = document.getElementById("prediction");
+const confFill        = document.getElementById("confFill");
+const disposalCard    = document.getElementById("disposalCard");
+const disposalLoading = document.getElementById("disposalLoading");
+const disposalBody    = document.getElementById("disposalBody");
+const disposalSteps   = document.getElementById("disposalSteps");
+const disposalTitle   = document.getElementById("disposalTitle");
+const disposalBadge   = document.getElementById("disposalBadge");
+const disposalIcon    = document.getElementById("disposalIcon");
+
+// ── DISPOSAL CATEGORY CONFIG ──────────────────────────────────────────────
+const CATEGORY_STYLES = {
+    recycle : { badge: "badge-recycle", icon: "♻️",  label: "RECYCLE"  },
+    trash   : { badge: "badge-trash",   icon: "🗑️",  label: "TRASH"    },
+    hazard  : { badge: "badge-hazard",  icon: "⚠️",  label: "HAZARDOUS"},
+    compost : { badge: "badge-compost", icon: "🌱",  label: "COMPOST"  },
+    donate  : { badge: "badge-donate",  icon: "🤝",  label: "DONATE"   }
+};
+
+function setStatus(message) { statusEl.textContent = message; }
+
+function showError(err) {
+    const message = err?.message || String(err);
+    errorBox.style.display = "block";
+    errorBox.innerHTML = `<strong>ERROR:</strong> ${escapeHtml(message)}<br><br>
+        <strong>What to try:</strong><br>
+        1. Run this page through a local server (e.g. VS Code Live Server).<br>
+        2. Keep internet connected while the model downloads.<br>
+        3. Switch to Fast fallback if Open Vocabulary is too large.`;
+}
+
+function escapeHtml(value) {
+    return value.replace(/[&<>"']/g, c =>
+        ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
+}
+
+function parseLabels() {
+    return labelInput.value
+        .split(",")
+        .map(l => l.trim().toLowerCase())
+        .filter(Boolean)
+        .filter((l, i, arr) => arr.indexOf(l) === i)
+        .slice(0, FAST_SCAN_MAX_LABELS);
+}
+
+async function setupCamera() {
+    if (!navigator.mediaDevices?.getUserMedia)
+        throw new Error("Camera access not available in this browser.");
+    if (video.srcObject) return;
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "environment" },
+        audio: false
+    });
+    video.srcObject = stream;
+    await new Promise((resolve, reject) => {
+        video.onloadedmetadata = resolve;
+        video.onerror = () => reject(new Error("Could not start webcam preview."));
+    });
+    await video.play();
+}
+
+async function init() {
+    if (isRunning || startBtn.disabled) return;
+    errorBox.style.display = "none";
+    startBtn.disabled = true;
+    startBtn.textContent = "STARTING CAMERA...";
+    predictionEl.textContent = "Loading";
+    confFill.style.width = "0%";
+    try {
+        activeConfig    = MODEL_CONFIGS[modelSelect.value];
+        candidateLabels = parseLabels();
+        if (activeConfig.usesCandidateLabels && candidateLabels.length < 2)
+            throw new Error("Add at least two labels for Open Vocabulary detection.");
+        await setupCamera();
+        resizeCanvasToVideo();
+        startBtn.textContent = "DOWNLOADING MODEL...";
+        setStatus(`Loading ${activeConfig.label}. First download may take a moment.`);
+        detector = await pipeline(activeConfig.task, activeConfig.id, {
+            dtype: "q4", progress_callback: updateProgress
+        });
+        isRunning = true;
+        startBtn.style.display = "none";
+        setControlsLocked(true);
+        setStatus(`${activeConfig.label} online. Watching for ${activeConfig.usesCandidateLabels ? candidateLabels.length + " priority labels" : "common objects"}.`);
+        speak("Detection engine activated.");
+        scheduleDetect(100);
+    } catch (err) {
+        showError(err);
+        setStatus("Initialization failed. Adjust engine or labels, then retry.");
+        predictionEl.textContent = "System Idle";
+        startBtn.disabled = false;
+        startBtn.textContent = "RETRY INITIALIZATION";
+        setControlsLocked(false);
+    }
+}
+
+function updateProgress(progress) {
+    if (progress.status === "progress" && progress.total) {
+        const pct = Math.max(0, Math.min(100, Math.round((progress.loaded / progress.total) * 100)));
+        startBtn.textContent = `DOWNLOADING: ${pct}%`;
+    } else if (progress.status === "ready") {
+        startBtn.textContent = "FINALIZING ENGINE...";
+    }
+}
+
+function setControlsLocked(locked) {
+    modelSelect.disabled = locked;
+    labelInput.disabled  = locked;
+}
+
+function resizeCanvasToVideo() {
+    const w = video.videoWidth || 1280;
+    const h = video.videoHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+}
+
+function scheduleDetect(delay = activeConfig?.interval || 800) {
+    clearTimeout(detectTimer);
+    detectTimer = setTimeout(detect, delay);
+}
+
+async function detect() {
+    if (!isRunning || !detector || isDetecting) return;
+    isDetecting = true;
+    try {
+        resizeCanvasToVideo();
+        const frame  = await captureFrame();
+        const output = activeConfig.usesCandidateLabels
+            ? await detector(frame.image, candidateLabels, { threshold: activeConfig.threshold, top_k: 6 })
+            : await detector(frame.image, { threshold: activeConfig.threshold, top_k: 6 });
+        skippedFrames = 0;
+        errorBox.style.display = "none";
+        const detections = normalizeDetections(output, frame.scaleX, frame.scaleY);
+        drawDetections(detections);
+        updatePrediction(detections);
+    } catch (err) {
+        console.warn("Detection frame skipped:", err);
+        skippedFrames++;
+        setStatus(`Skipped ${skippedFrames} frame${skippedFrames === 1 ? "" : "s"} while catching up.`);
+        if (skippedFrames >= 3) {
+            predictionEl.textContent = "Frame Error";
+            confFill.style.width = "0%";
+            showError(err);
+            isRunning = false;
+            startBtn.style.display = "block";
+            startBtn.disabled = false;
+            startBtn.textContent = activeConfig.usesCandidateLabels ? "TRY FAST FALLBACK" : "RETRY INITIALIZATION";
+            if (activeConfig.usesCandidateLabels) modelSelect.value = "fast-coco";
+            setControlsLocked(false);
+            labelInput.disabled = modelSelect.value !== "open-vocab";
+        }
+    } finally {
+        isDetecting = false;
+        scheduleDetect();
+    }
+}
+
+async function captureFrame() {
+    if (video.readyState < 2) throw new Error("Webcam frame not ready yet.");
+    const sourceWidth  = video.videoWidth  || 640;
+    const sourceHeight = video.videoHeight || 360;
+    const maxWidth = activeConfig.usesCandidateLabels ? 320 : 416;
+    const scale  = Math.min(1, maxWidth / sourceWidth);
+    const width  = Math.max(1, Math.round(sourceWidth  * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
+    if (frameCanvas.width !== width || frameCanvas.height !== height) {
+        frameCanvas.width = width; frameCanvas.height = height;
+    }
+    frameCtx.drawImage(video, 0, 0, width, height);
+    const rawImage = RawImage.fromCanvas
+        ? RawImage.fromCanvas(frameCanvas)
+        : await RawImage.fromURL(frameCanvas.toDataURL("image/jpeg", 0.86));
+    return {
+        image: rawImage.rgb ? rawImage.rgb() : rawImage,
+        scaleX: canvas.width / width,
+        scaleY: canvas.height / height
+    };
+}
+
+function normalizeDetections(output, scaleX = 1, scaleY = 1) {
+    if (!Array.isArray(output)) return [];
+    return output
+        .filter(item => item?.box && Number.isFinite(item.score))
+        .map(item => ({
+            label: item.label || "object",
+            score: item.score,
+            box: {
+                xmin: clamp(item.box.xmin * scaleX, 0, canvas.width),
+                ymin: clamp(item.box.ymin * scaleY, 0, canvas.height),
+                xmax: clamp(item.box.xmax * scaleX, 0, canvas.width),
+                ymax: clamp(item.box.ymax * scaleY, 0, canvas.height)
+            }
+        }))
+        .filter(item => item.box.xmax > item.box.xmin && item.box.ymax > item.box.ymin)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 6);
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, Number(value) || 0));
+}
+
+function drawDetections(detections) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = "bold 15px Arial";
+    ctx.textBaseline = "top";
+    detections.forEach(obj => {
+        // Mirror the box horizontally to match the CSS-flipped webcam
+        const mirrorXmin = canvas.width - obj.box.xmax;
+        const mirrorXmax = canvas.width - obj.box.xmin;
+        const { ymin, ymax } = obj.box;
+        const w = mirrorXmax - mirrorXmin;
+        const h = ymax - ymin;
+        const label = `${obj.label} ${Math.round(obj.score * 100)}%`;
+        const textW  = Math.min(ctx.measureText(label).width + 12, canvas.width - mirrorXmin);
+        const labelY = ymin > 28 ? ymin - 28 : ymin + 4;
+
+        ctx.strokeStyle = "#facc15"; ctx.lineWidth = 3;
+        ctx.strokeRect(mirrorXmin, ymin, w, h);
+        ctx.fillStyle = "#facc15";
+        ctx.fillRect(mirrorXmin, labelY, textW, 24);
+        ctx.fillStyle = "#000";
+        // Text is drawn in normal (un-flipped) canvas — reads correctly
+        ctx.fillText(label, mirrorXmin + 6, labelY + 4, Math.max(20, textW - 10));
+    });
+}
+
+function updatePrediction(detections) {
+    if (!detections.length) {
+        predictionEl.textContent = "Scanning";
+        confFill.style.width = "0%";
+        stableHits = 0;
+        lastSpoken = "";
+        lastDisposalLabel = "";
+        labelHistory = [];
+        return;
+    }
+
+    const top = detections[0];
+    const stableLabel = getMostStableLabel(detections);
+    const displayLabel = stableLabel || top.label;
+
+    predictionEl.textContent = displayLabel;
+    confFill.style.width = `${Math.round(top.score * 100)}%`;
+    setStatus(`${detections.length} object${detections.length === 1 ? "" : "s"} found. Confidence: ${Math.round(top.score * 100)}%`);
+
+    // stableHits tracks how many consecutive frames the SAME label has been seen
+    if (displayLabel === lastSpoken) {
+        stableHits++;
+    } else {
+        stableHits = 1;
+        lastDisposalLabel = ""; // different object — allow disposal card to refresh
+    }
+    lastSpoken = displayLabel;
+
+    const now = Date.now();
+    if (stableHits === 1 && top.score >= activeConfig.threshold && now - lastSpeechAt > 2200) {
+        speak(displayLabel);
+        lastSpeechAt = now;
+    }
+
+    // Show disposal card once label is stable for 2+ frames AND not already shown
+    if (stableHits >= 2 && displayLabel !== lastDisposalLabel) {
+        fetchDisposalGuide(displayLabel);
+    }
+}
+
+// ── OFFLINE DISPOSAL DATABASE ─────────────────────────────────────────────
+
+const DISPOSAL_DB = {
+    // ── RECYCLABLES
+    bottle:      { category:"recycle", steps:["Empty and rinse the bottle thoroughly","Remove any caps or lids (recycle separately)","Check the number inside the recycling symbol (1 & 2 are widely accepted)","Place in your blue/green recycling bin"], tip:"Rinsing bottles prevents contamination of entire recycling batches." },
+    cup:         { category:"recycle", steps:["Empty any liquid completely","Rinse if it contained food or drink","Remove paper sleeves from disposable cups","Place clean cups in recycling — greasy ones go in trash"], tip:"Reusable cups save ~500 disposable cups per year." },
+    can:         { category:"recycle", steps:["Rinse out any remaining food or drink","Do not crush — some facilities need intact cans","Remove paper labels if possible","Place in metal recycling bin"], tip:"Aluminium cans can be recycled infinitely without quality loss." },
+    phone:       { category:"hazard",  steps:["Back up your data before disposal","Factory reset to erase personal information","Find an e-waste drop-off centre or retailer take-back program","Never place in regular trash — batteries are a fire hazard"], tip:"Many brands offer trade-in or recycling programs — check their website." },
+    laptop:      { category:"hazard",  steps:["Back up all data and do a factory reset","Remove the battery if possible (dispose separately)","Take to a certified e-waste recycler or manufacturer take-back","Do not place in regular trash or recycling bin"], tip:"One recycled laptop saves enough energy to power a home for 2 days." },
+    keyboard:    { category:"hazard",  steps:["Remove any batteries if wireless","Wipe clean of personal stickers or data","Take to an e-waste collection point or electronics retailer","Some charities accept working keyboards for donation"], tip:"Donate working peripherals to schools or NGOs before recycling." },
+    mouse:       { category:"hazard",  steps:["Remove batteries if present","Donate if still working — schools often accept them","Otherwise take to an e-waste drop-off point","Do not put in regular bin"], tip:"Wireless mice with dead batteries still have recyclable parts inside." },
+    charger:     { category:"hazard",  steps:["Do not throw in regular trash — wires can jam sorting machines","Take to an e-waste bin at a supermarket or electronics store","If undamaged, donate to a charity or community swap group","Wrap cord neatly to prevent tangling at recycling facilities"], tip:"Charging cables contain copper — a highly valuable recyclable metal." },
+    cable:       { category:"hazard",  steps:["Bundle cables with a rubber band so they don't tangle in machines","Drop off at an electronics retailer e-waste bin","Check if local scrap metal dealers accept copper cables","Donate working cables to community groups"], tip:"Copper cables are worth money — many scrap dealers pay for them." },
+    headphones:  { category:"hazard",  steps:["If still working, donate or sell online before discarding","Remove ear cushions — soft foam can sometimes be composted","Take the electronic parts to an e-waste facility","Check manufacturer take-back schemes"], tip:"Audio brands like Sony and Apple offer refurbishment programs." },
+    remote:      { category:"hazard",  steps:["Remove all batteries first — dispose of them separately","If working, donate with its corresponding device","Place plastic shell in e-waste or hard plastics recycling","Check local council for small electricals collection days"], tip:"Rechargeable batteries in remotes cut battery waste by 80%." },
+    book:        { category:"donate",  steps:["Check if the book is in readable condition","Donate to a library, school, or second-hand book shop","For damaged books, remove the cover and recycle the pages","Shredded book paper can be composted"], tip:"A donated book can be read by dozens of people before it wears out." },
+    paper:       { category:"recycle", steps:["Ensure paper is dry and not heavily soiled","Remove any plastic windows (e.g. from envelopes)","Flatten and bundle sheets together","Place in your paper recycling bin"], tip:"Recycling one tonne of paper saves 17 trees and 7,000 litres of water." },
+    notebook:    { category:"recycle", steps:["Remove the spiral wire binding (recycle metal separately)","Tear out used pages and shred if they contain sensitive info","Recycle blank pages and covers in paper bin","Donate unused portions to schools"], tip:"Opt for recycled-paper notebooks to close the recycling loop." },
+    pen:         { category:"trash",   steps:["Check if the brand offers a pen recycling program (e.g. Bic, Staedtler)","If not, dispose in general waste — most pens are mixed plastic","Remove the ink cartridge if refillable and replace instead","Consider switching to refillable pens to reduce waste"], tip:"Refillable fountain pens last decades and cut plastic waste drastically." },
+    pencil:      { category:"compost", steps:["Break the pencil into small pieces","The wood body can go into compost or organic waste","The graphite tip is non-toxic and safe in general waste","Metal ferrules (the ring) go in metal recycling"], tip:"Cedar pencil wood is sustainably sourced — still worth composting." },
+    bag:         { category:"donate",  steps:["If in good condition, donate to a charity shop or community group","Fabric bags can be repaired and reused many times","Heavily worn bags can be cut into cleaning rags","Synthetic material bags go to textile recycling points"], tip:"One reusable bag replaces ~700 plastic bags over its lifetime." },
+    backpack:    { category:"donate",  steps:["Clean out all contents and compartments","Donate to schools, shelters, or community drives if still usable","For damaged bags, separate metal zips (recycle) from fabric (textile bin)","Some outdoor brands (Patagonia, Decathlon) offer repair or take-back"], tip:"Look for backpack repair cafés — a broken zip needn't mean a new bag." },
+    shoes:       { category:"donate",  steps:["Clean the shoes before donating","Donate wearable shoes to shelters, NGOs, or charity shops","Worn-out shoes can go to shoe recycling programs (Nike Reuse-A-Shoe)","Separate rubber soles from fabric uppers if possible for better recycling"], tip:"Nike's Reuse-A-Shoe program grinds old trainers into sports surfaces." },
+    watch:       { category:"hazard",  steps:["Remove the battery — watch batteries contain mercury or lithium","Take the battery to a pharmacy or battery recycling point","Donate working watches to charity or sell second-hand","Metal watch cases can go to scrap metal recycling"], tip:"A serviced watch can last generations — repair before replacing." },
+    glasses:     { category:"donate",  steps:["Clean the lenses and frame","Donate to Vision Aid Overseas, Lions Club, or local opticians","Broken glasses can still be donated — lenses are reground","Metal frames go to scrap metal if not donatable"], tip:"Donated glasses restore sight to people in low-income countries." },
+    plant:       { category:"compost", steps:["Remove from the pot and shake off excess soil","Cut or shred the plant into smaller pieces to speed composting","Place in your compost bin or green waste collection","The pot (if plastic) should be rinsed and recycled separately"], tip:"Composting garden waste returns nutrients directly to the soil." },
+    flower:      { category:"compost", steps:["Remove any plastic wrapping or foam from the stems","Pull off dead petals and leaves","Place organic matter in compost bin or garden waste bag","Compost flowers within a week of wilting for best results"], tip:"Wilted flowers become rich compost in as little as 6–8 weeks." },
+    food:        { category:"compost", steps:["Scrape food scraps into a compost bin or caddy","Avoid composting meat or dairy in open bins (attracts pests)","Cooked food can go in a sealed bokashi bin","If no compost available, use your council's food waste collection"], tip:"Food waste in landfill produces methane — 80x more potent than CO₂." },
+    plate:       { category:"trash",   steps:["Ceramic plates cannot be recycled in most kerbside collections","If unchipped, donate to a charity shop or community kitchen","Broken ceramics wrap in newspaper and place in general waste","Some ceramics can be crushed and used as garden drainage aggregate"], tip:"Enamel camping plates last decades — far better than disposable ones." },
+    spoon:       { category:"recycle", steps:["Metal spoons go in scrap metal or metal recycling","Plastic spoons generally go in general waste","Wooden spoons can be composted when they reach end of life","Donate a full cutlery set to a hostel or community kitchen"], tip:"A set of stainless steel cutlery lasts a lifetime with basic care." },
+    fork:        { category:"recycle", steps:["Metal forks go in metal/scrap recycling","Plastic forks go in general waste (not recyclable in most councils)","If part of a set, donate the whole set to charity","Bent metal forks can still be accepted at scrap dealers"], tip:"Swap single-use plastic cutlery for a carry-your-own bamboo set." },
+    toy:         { category:"donate",  steps:["Clean the toy and check it's safe (no broken sharp edges)","Donate to a children's hospital, shelter, or charity shop","Electronic toys: remove batteries before donating","Broken plastic toys go to hard plastic recycling if your council accepts it"], tip:"Toy libraries let kids borrow toys — reducing demand for new ones." },
+    ball:        { category:"donate",  steps:["Deflate if possible for compact storage/transport","Donate to schools, sports clubs, or community centres","Old tennis balls can be donated to dog shelters or chair leg protectors","Worn-out rubber balls can go to specialist rubber recycling"], tip:"Organisations like 'Soccer Without Borders' redistribute sports equipment globally." },
+    car:         { category:"hazard",  steps:["Contact a licensed vehicle dismantler or DVLA-authorised scrap yard","Drain all fluids (oil, coolant, brake fluid) — these are hazardous","Remove the battery and take to a battery recycling point","Up to 80% of a car's materials can be recycled"], tip:"End-of-life vehicles must be processed by authorised facilities by law." },
+    bicycle:     { category:"donate",  steps:["If rideable, donate to a cycle charity, school, or community group","For repairs, visit a bicycle repair café or co-op workshop","Scrap metal frames go to a metal recycler","Rubber tyres can go to specialist tyre recycling centres"], tip:"Bicycle charities like Re-Cycle ship donated bikes to Africa and Asia." },
+    dog:         { category:"donate",  steps:["Please do not discard an animal — contact a local rescue centre","Rehome through a reputable adoption charity (RSPCA, local shelter)","Never abandon a pet — it is illegal in most countries","If you cannot keep your pet, speak to a vet for guidance"], tip:"Adopt don't shop — millions of dogs in shelters await loving homes." },
+    cat:         { category:"donate",  steps:["Please do not discard an animal — contact a local rescue centre","Rehome through a reputable charity or adoption centre","Never abandon a pet — it causes suffering and is illegal","Speak to a vet or local authority if you need urgent help"], tip:"Neutering your cat prevents thousands of unwanted kittens annually." },
+    bird:        { category:"donate",  steps:["If a pet bird, rehome via a bird rescue or aviary society","If a wild injured bird, contact the RSPCA or local wildlife rescue","Never release non-native pet birds into the wild","Cage and accessories can be donated to the new owner or rescue"], tip:"Wild bird populations support entire ecosystems — protect them." },
+    table:       { category:"donate",  steps:["Donate to a charity shop, Freecycle, or Facebook Marketplace","If damaged, a carpenter may repair it cheaply","Wooden tables can be upcycled or repurposed as shelving","At true end of life, untreated wood can be composted or used as firewood"], tip:"Second-hand furniture has up to 75% lower carbon footprint than new." },
+    chair:       { category:"donate",  steps:["Donate working chairs to charity shops or community centres","Post on Freecycle, Gumtree, or local Facebook groups","Upholstered chairs: separate foam and fabric at a specialist recycler","Metal chair frames go to scrap metal recycling"], tip:"Reupholstering a chair costs a fraction of buying new — and saves landfill." },
+};
+
+// Keyword → label mapper for fuzzy matching
+const KEYWORD_MAP = {
+    "water bottle":"bottle","plastic bottle":"bottle","glass bottle":"bottle",
+    "mobile":"phone","smartphone":"phone","cell phone":"phone","iphone":"phone","android":"phone",
+    "computer":"laptop","notebook computer":"laptop","mac":"laptop","macbook":"laptop",
+    "earphones":"headphones","earbuds":"headphones","airpods":"headphones",
+    "tv remote":"remote","television remote":"remote",
+    "textbook":"book","novel":"book","magazine":"book",
+    "newspaper":"paper","cardboard":"paper","envelope":"paper",
+    "sneakers":"shoes","boots":"shoes","sandals":"shoes","trainers":"shoes",
+    "sunglasses":"glasses","spectacles":"glasses","goggles":"glasses",
+    "flower pot":"plant","houseplant":"plant","shrub":"plant","tree":"plant",
+    "fruit":"food","vegetable":"food","pizza":"food","leftovers":"food","meal":"food",
+    "dinner plate":"plate","bowl":"plate","mug":"cup","glass":"cup","jar":"bottle",
+    "knife":"spoon","cutlery":"spoon","utensil":"spoon",
+    "stuffed animal":"toy","action figure":"toy","lego":"toy","doll":"toy",
+    "soccer ball":"ball","basketball":"ball","tennis ball":"ball","football":"ball",
+    "vehicle":"car","truck":"car","bus":"car","motorbike":"bicycle","scooter":"bicycle",
+    "puppy":"dog","kitten":"cat","parrot":"bird","pigeon":"bird",
+    "desk":"table","dining table":"table","stool":"chair","sofa":"chair","couch":"chair",
+    "wire":"cable","usb":"cable","hdmi":"cable","extension cord":"cable",
+    "wristwatch":"watch","smartwatch":"watch","clock":"watch",
+    "pencil case":"bag","handbag":"bag","purse":"bag","suitcase":"backpack","luggage":"backpack",
+};
+
+const DEFAULT_DISPOSAL = {
+    category: "trash",
+    steps: [
+        "Check if your local council has a specific collection for this item",
+        "If unsure, place in general waste to avoid contaminating recycling",
+        "Search Earth911.com or your local waste authority website for guidance",
+        "Consider if the item could be repaired, donated, or repurposed first"
+    ],
+    tip: "When in doubt, reduce and reuse before worrying about recycling."
+};
+
+function lookupDisposal(rawLabel) {
+    const label = rawLabel.toLowerCase().trim();
+    // Direct match
+    if (DISPOSAL_DB[label]) return DISPOSAL_DB[label];
+    // Keyword map match
+    const mapped = KEYWORD_MAP[label];
+    if (mapped && DISPOSAL_DB[mapped]) return DISPOSAL_DB[mapped];
+    // Partial match — check if any DB key appears inside the label or vice versa
+    for (const key of Object.keys(DISPOSAL_DB)) {
+        if (label.includes(key) || key.includes(label)) return DISPOSAL_DB[key];
+    }
+    for (const [kw, mapped2] of Object.entries(KEYWORD_MAP)) {
+        if (label.includes(kw) || kw.includes(label)) return DISPOSAL_DB[mapped2] || null;
+    }
+    return null;
+}
+
+function fetchDisposalGuide(label) {
+    if (label === lastDisposalLabel) return;
+    lastDisposalLabel = label;
+
+    disposalCard.style.display    = "block";
+    disposalLoading.style.display = "none";
+    disposalBody.style.display    = "block";
+
+    const data = lookupDisposal(label) || DEFAULT_DISPOSAL;
+    renderDisposalCard(label, data);
+}
+
+function renderDisposalCard(label, data) {
+    const cat   = (data.category || "trash").toLowerCase();
+    const style = CATEGORY_STYLES[cat] || CATEGORY_STYLES.trash;
+    const steps = Array.isArray(data.steps) ? data.steps : [];
+
+    const borderColors = {
+        recycle:"rgba(74,222,128,0.35)",
+        trash:"rgba(248,113,113,0.35)",
+        hazard:"rgba(251,146,60,0.35)",
+        compost:"rgba(96,165,250,0.35)",
+        donate:"rgba(250,204,21,0.35)"
+    };
+    disposalCard.style.borderColor = borderColors[cat] || "#333";
+
+    disposalTitle.textContent = `How to dispose: ${label}`;
+    disposalIcon.textContent  = style.icon;
+
+    disposalBadge.className   = `disposal-badge ${style.badge}`;
+    disposalBadge.textContent = style.label;
+
+    disposalSteps.innerHTML = steps.map((s, i) => `
+        <div class="step">
+            <span class="step-num">${String(i + 1).padStart(2,"0")}.</span>
+            <span class="step-text">${escapeHtml(String(s))}</span>
+        </div>
+    `).join("");
+
+    if (data.tip) {
+        disposalSteps.innerHTML += `
+            <div style="margin-top:12px;padding:10px 12px;background:#111;border-radius:6px;border:1px solid #1e1e1e;">
+                <span style="color:#555;font-size:0.7rem;letter-spacing:1px;">ECO TIP · </span>
+                <span style="color:#888;font-size:0.78rem;">${escapeHtml(String(data.tip))}</span>
+            </div>`;
+    }
+
+    disposalLoading.style.display = "none";
+    disposalBody.style.display    = "block";
+
+    speak(`${label}. ${style.label}. ${steps[0] || ""}`);
+}
+
+
+
+function speak(text) {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+}
+
+modelSelect.addEventListener("change", () => {
+    const isOV = modelSelect.value === "open-vocab";
+    labelInput.disabled = !isOV;
+    setStatus(isOV
+        ? "Open Vocabulary can detect the labels you type below."
+        : "Fast fallback uses common object categories and loads more quickly.");
+});
+
+window.addEventListener("resize", resizeCanvasToVideo);
+startBtn.addEventListener("click", init);
+</script>
+</body>
+</html>
